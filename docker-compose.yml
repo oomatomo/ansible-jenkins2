@@ -8,3 +8,8 @@ services:
     ports:
       - "2222:22"
       - "80:80"
+  test:
+    build: ./
+    volumes:
+      - ./:/home/test/ansible-jenkins2
+    command: "bash test.sh"
