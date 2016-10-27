@@ -1,0 +1,10 @@
+version: '2'
+services:
+  dev:
+    build: ./
+    volumes:
+      - ./:/home/test/ansible-jenkins2
+    command: "sudo /usr/sbin/sshd -D"
+    ports:
+      - "2222:22"
+      - "80:80"
