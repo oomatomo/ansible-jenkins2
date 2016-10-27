@@ -1,0 +1,14 @@
+---
+
+machine:
+  services:
+    - docker
+
+dependencies:
+  override:
+    - sudo pip install --upgrade docker-compose
+test:
+  pre:
+    - docker-compose build
+  override:
+    - docker-compose run dev './test.sh'
