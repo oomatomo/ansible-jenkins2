@@ -1,0 +1,34 @@
+import groovy.json.JsonOutput
+
+def VERSION=1.0
+
+// Slackへの通知
+def notifySlack(text, channel) {
+    def slackURL = ''
+    def jenkinsIcon = 'https://wiki.jenkins-ci.org/download/attachments/327683/JENKINS?version=1&modificationDate=1302750804000'
+    def payload = JsonOutput.toJson([text      : text,
+                                     channel   : channel,
+                                     username  : "jenkins",
+                                     icon_url  : jenkinsIcon])
+    sh "curl -X POST --data-urlencode \'payload=${payload}\' ${slackURL}"
+}
+
+node {
+    wrap([$class: 'TimestamperBuildWrapper']) {
+        try {
+            stage "VERSION ${VERSION}"
+            // リポジトリのチェックアウト
+            checkout scm
+            sh  """#!/bin/bash
+            echo "test2"
+            echo "`date -d '1 day ago' +%Y-%m-%d`"
+            """
+        } catch (err) {
+            // エラー時の処理
+            notifySlack("build failed ${env.JOB_NAME} <!channel>", "#")
+            // 最後にエラーを明記しなければ、jobがエラーにならない
+            // これ以降の処理は実行されないの、最後に宣言すること
+            error 'error'
+        }
+    }
+}
