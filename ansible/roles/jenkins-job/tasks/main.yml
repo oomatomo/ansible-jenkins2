@@ -1,0 +1,40 @@
+---
+
+- name: download jenkins-cli
+  get_url: url=http://localhost:8080/jnlpJars/jenkins-cli.jar dest=/root/jenkins-cli.jar
+
+- name: Install Jenkins plugins.
+  command: >
+    java -jar /root/jenkins-cli.jar -s http://localhost:8080 install-plugin {{ item }}
+    creates=/var/lib/jenkins/plugins/{{ item }}.jpi
+  with_items: "{{ jenkins.plugins }}"
+  notify: restart jenkins
+
+- name: list jobs
+  shell: "java -jar /root/jenkins-cli.jar -s http://localhost:8080 list-jobs --username {{ jenkins.username }} --password {{ jenkins.password }}"
+  register: list_jobs
+  changed_when: False
+
+# jobの更新の時は、秘密鍵の認証を行う
+# 公開鍵の設定は、ユーザーの設定で行っている
+# 秘密鍵は、手動でおくようにする
+
+- name: ジョブの名前を変数に設定
+  set_fact:
+    jobs: "[ 'test1', 'test2' ]"
+
+- name: cache {{ item }} config xml
+  copy: src=job_config_{{ item }}.xml dest=/root/job_config_{{ item }}.xml
+  with_items: "{{ jobs }}"
+
+- name: create {{ item }} job
+  shell: "java -jar /root/jenkins-cli.jar -s http://localhost:8080 create-job --username {{ jenkins.username }} --password {{ jenkins.password }} {{ item }} < /root/job_config_{{ item }}.xml"
+  when: list_jobs.stdout.find("{{ item }}") == -1
+  ignore_errors: True
+  with_items: "{{ jobs }}"
+
+- name: update  job
+  shell: "java -jar /root/jenkins-cli.jar -s http://localhost:8080 -i /var/lib/jenkins/.ssh/id_rsa update-job {{ item }} < /root/job_config_{{ item }}.xml"
+  when: list_jobs.stdout.find("{{ item }}") == 0
+  ignore_errors: True
+  with_items: "{{ jobs }}"

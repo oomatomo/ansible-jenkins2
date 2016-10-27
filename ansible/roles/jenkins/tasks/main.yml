@@ -1,0 +1,95 @@
+---
+
+- name: check current timezone
+  shell: date
+  register: current_zone
+  changed_when: False
+
+- name: set utc timezone
+  file: src=/usr/share/zoneinfo/Asia/Tokyo  dest=/etc/localtime state=link force=yes
+  when: current_zone.stdout.find('JST') == -1
+  ignore_errors: True
+
+- name: install python-devel
+  yum: name={{item}} state=latest
+  with_items:
+    - python-devel
+
+- name: install pip
+  command: easy_install pip
+
+- name: install ansible
+  command: pip install ansible
+
+- name: install pycrypto
+  command: pip install pycrypto==2.3
+
+- name: set jenkins.repo
+  copy: src=jenkins.repo dest=/etc/yum.repos.d/jenkins.repo owner=root group=root mode=0644
+
+- name: add jenkins repo GPG key.
+  rpm_key:
+    state: present
+    key: http://pkg.jenkins-ci.org/redhat/jenkins-ci.org.key
+
+- name: install nginx git java
+  yum: name={{item}} state=latest
+  with_items:
+    - nginx
+    - git
+    - java-1.8.0-openjdk
+    - java-1.8.0-openjdk-devel
+    - jenkins
+
+- name: auto start on
+  service: name={{item}} state=started enabled=yes
+  with_items:
+    - nginx
+    - jenkins
+
+- name: set nginx.conf
+  copy: src=nginx.conf dest=/etc/nginx/nginx.conf owner=root group=root mode=0644
+  notify: restart nginx
+
+- name: set sysconfig jenkins
+  copy: src=sysconfig_jenkins dest=/etc/sysconfig/jenkins owner=root group=root mode=0600
+  notify: restart jenkins
+
+# - name: create jenkins user direcotry
+  # file:
+    # path: /var/lib/jenkins/users/test/
+    # state: directory
+    # owner: jenkins
+    # group: jenkins
+    # mode: 0755
+
+# - name: set jenkins user
+  # copy: src=user_test_config.xml dest=/var/lib/jenkins/users/test/config.xml owner=jenkins group=jenkins mode=0644
+  # notify: restart jenkins
+
+- name: create jenkins init script directory
+  file:
+    path: /var/lib/jenkins/init.groovy.d
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+
+- name: jenkins script - configure slave agent port
+  copy:
+    src: slaveAgentPort.groovy
+    dest: /var/lib/jenkins/init.groovy.d/slaveAgentPort.groovy
+    owner: jenkins
+    group: jenkins
+    mode: 0744
+  notify: restart jenkins
+
+- name: create jenkins ssh direcotry
+  file: path=/var/lib/jenkins/.ssh state=directory owner=jenkins group=jenkins mode=0700
+
+# 手動で秘密鍵を追加する
+- name: create jenkins ssh file
+  file: path=/var/lib/jenkins/.ssh/id_rsa state=touch owner=jenkins group=jenkins mode=0600
+
+- name: ansible cfg
+  copy: src=ansible.cfg dest=/var/lib/jenkins/.ansible.cfg owner=jenkins group=jenkins mode=0644
