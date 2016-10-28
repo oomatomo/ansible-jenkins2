@@ -1,0 +1,8 @@
+---
+jenkins:
+  username: test
+  password: test
+  plugins: []
+  jobs:
+    - test1
+    - test2

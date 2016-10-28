@@ -19,22 +19,18 @@
 # 公開鍵の設定は、ユーザーの設定で行っている
 # 秘密鍵は、手動でおくようにする
 
-- name: ジョブの名前を変数に設定
-  set_fact:
-    jobs: "[ 'test1', 'test2' ]"
-
 - name: cache {{ item }} config xml
   copy: src=job_config_{{ item }}.xml dest=/root/job_config_{{ item }}.xml
-  with_items: "{{ jobs }}"
+  with_items: "{{ jenkins.jobs }}"
 
 - name: create {{ item }} job
   shell: "java -jar /root/jenkins-cli.jar -s http://localhost:8080 create-job --username {{ jenkins.username }} --password {{ jenkins.password }} {{ item }} < /root/job_config_{{ item }}.xml"
   when: list_jobs.stdout.find("{{ item }}") == -1
   ignore_errors: True
-  with_items: "{{ jobs }}"
+  with_items: "{{ jenkins.jobs }}"
 
 - name: update  job
   shell: "java -jar /root/jenkins-cli.jar -s http://localhost:8080 -i /var/lib/jenkins/.ssh/id_rsa update-job {{ item }} < /root/job_config_{{ item }}.xml"
   when: list_jobs.stdout.find("{{ item }}") == 0
   ignore_errors: True
-  with_items: "{{ jobs }}"
+  with_items: "{{ jenkins.jobs }}"
