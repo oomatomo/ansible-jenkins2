@@ -20,7 +20,7 @@ node {
             // リポジトリのチェックアウト
             checkout scm
             sh  """#!/bin/bash
-            echo "test2"
+            echo "test1"
             echo "`date -d '1 day ago' +%Y-%m-%d`"
             """
         } catch (err) {
